@@ -8,11 +8,14 @@ import os.path
 import pytz
 import sys
 import configparser
-from datetime import date
+import datetime
 import getopt
 
 
-version='v1.0.0'
+### VERSION_BEGIN
+version='1.0.2'
+### VERSION_END
+
 
 class Config:
     def __init__(self):
@@ -86,9 +89,9 @@ def main(argv_all):
             logging.debug("file_id: " + str(message.document.file_id))
             file_info = bot.get_file(message.document.file_id)
             tz = pytz.timezone(config.timezone)
-            current_datetime = datetime.now(tz)
+            current_datetime = datetime.datetime.now(tz)
             date_str = str(current_datetime.strftime("%Y-%m-%d"))
-            igc_file_name = date_str + "_" + message.from_user.username + "_" + message.document.file_name
+            igc_file_name = date_str + "#" + message.from_user.username + "#" + message.document.file_name
             logging.debug("igc_file_name: " + str(igc_file_name))
             track_date_dir = os.path.join(config.track_dir, date_str)
 
