@@ -13,7 +13,7 @@ import getopt
 
 
 ### VERSION_BEGIN
-version='1.0.3'
+version='1.0.4'
 ### VERSION_END
 
 
