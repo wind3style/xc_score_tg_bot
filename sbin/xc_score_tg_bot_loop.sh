@@ -76,7 +76,7 @@ stop_one ()
             pp=`ps --ppid ${p} -opid --no-headers | sed 's/^[ ]*//'`
             if [ -d /proc/${pp} ]; then
                 echo "PID for killing: "${pp}
-                sudo kill -TERM ${pp}
+                kill -TERM ${pp}
                 echo "${PRG_NAME} ${1} stop - OK"
                 return 0
             fi
@@ -98,7 +98,7 @@ rotate_one ()
             pp=`ps --ppid ${p} -opid --no-headers | sed 's/^[ ]*//'`
             if [ -d /proc/${pp} ]; then
                 echo "PID for killing: "${pp}
-                sudo kill -TERM ${pp}
+                kill -TERM ${pp}
                 echo "${PRG_NAME} ${1} rotate - OK"
                 return 0
             fi
