@@ -13,7 +13,7 @@ import getopt
 
 
 ### VERSION_BEGIN
-version='1.0.2'
+version='1.0.3'
 ### VERSION_END
 
 
@@ -23,7 +23,6 @@ class Config:
         self.track_dir = None
         self.timezone = None
         self.log_level = 'INFO'
-        self.log_file = 'xc_score_tg_bot.log'
 
 config = Config()
 
@@ -60,7 +59,7 @@ def main(argv_all):
     
     read_config(config_file_name)
 
-    logging.basicConfig(level=config.log_level, filename=config.log_file, filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
+    logging.basicConfig(level=config.log_level, format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
     telebot.logger.setLevel(config.log_level)
 
     bot = telebot.TeleBot(config.token)
@@ -71,17 +70,16 @@ def main(argv_all):
 
     @bot.message_handler(content_types=['text'])
     def get_text_messages(message):
-        logging.debug("message:" + str(message))
-        logging.debug("message type:" + str(type(message)))
-
-        if message.text.lower() == 'Привет'.lower():
-            start(message)
+        logging.debug("Text message")
+        logging.debug("message.from_user.id: " + str(message.from_user.id))
+        logging.debug("message.from_user.username: " + str(message.from_user.username))
+        bot.send_message(message.from_user.id, "Не морочте мне голову болтовней.")
 
     @bot.message_handler(content_types=['document'])
-    def get_text_messages(message):
+    def get_document_messages(message):
 
         try:
-
+            logging.debug("Document message")
             logging.debug("doc message:" + str(message))
             logging.debug("doc message type:" + str(type(message)))
             logging.debug("message.from_user.id: " + str(message.from_user.id))
