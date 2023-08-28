@@ -5,7 +5,6 @@ import requests
 from telebot import types
 import logging
 import os.path
-import pytz
 import sys
 import configparser
 import datetime
@@ -14,7 +13,7 @@ import re
 
 
 ### VERSION_BEGIN
-version='1.0.9'
+version='1.0.10'
 ### VERSION_END
 
 
@@ -22,6 +21,7 @@ class Config:
     def __init__(self):
         self.token = None
         self.track_dir = None
+        self.error_dir = None
         self.timezone = None
         self.log_level = 'INFO'
 
@@ -111,6 +111,20 @@ def main(argv_all):
                     bot.send_message(message.from_user.id, "Ваш трек сохранен и передан на обработку.")
             else:
                 track_error(bot, message)
+                    ### save error track
+                if config.error_dir != None:
+                        ### Create dir
+                    try:
+                        os.makedirs(config.error_dir)
+                    except FileExistsError:
+                        pass            
+                    
+                    igc_file_name = message.from_user.username + "#" + message.document.file_name
+                    error_path = os.path.join(config.error_dir, igc_file_name)
+
+                    with open(error_path, "wb") as fout:
+                        fout.write(resp.content)
+                    
                 
         except Exception as e:
             logging.error("Exception:" + str(e))
@@ -132,6 +146,7 @@ def read_config(file_name):
 
         get_param(cParser, 'MAIN', 'token', config, 'token', str, True)
         get_param(cParser, 'MAIN', 'track_dir', config, 'track_dir', str, True)
+        get_param(cParser, 'MAIN', 'error_dir', config, 'error_dir', str, False)
         get_param(cParser, 'MAIN', 'timezone', config, 'timezone', str, True)
         get_param(cParser, 'MAIN', 'log_level', config, 'log_level', str, False)
         get_param(cParser, 'MAIN', 'log_file', config, 'log_file', str, False)
@@ -170,7 +185,7 @@ def get_param(cParser, section, object_var_name, conf_obj, param_name, param_typ
 def date_from_igc(data):
     data_str = data.decode('utf-8')
     for line in data_str.splitlines():
-        m = re.match(r'^HFDTEDATE:.*(\d{2})(\d{2})(\d{2}),.*', line)
+        m = re.match(r'^HFDTEDATE:.*(\d{2})(\d{2})(\d{2}).*', line)
         if m != None:
             DD = m.group(1)
             MM = m.group(2)
