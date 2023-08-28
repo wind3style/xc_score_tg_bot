@@ -10,10 +10,11 @@ import sys
 import configparser
 import datetime
 import getopt
+import re
 
 
 ### VERSION_BEGIN
-version='1.0.6'
+version='1.0.7'
 ### VERSION_END
 
 
@@ -86,31 +87,41 @@ def main(argv_all):
             logging.debug("message.from_user.username: " + str(message.from_user.username))
             logging.debug("file_id: " + str(message.document.file_id))
             file_info = bot.get_file(message.document.file_id)
-            tz = pytz.timezone(config.timezone)
-            current_datetime = datetime.datetime.now(tz)
-            date_str = str(current_datetime.strftime("%Y-%m-%d"))
-            igc_file_name = date_str + "#" + message.from_user.username + "#" + message.document.file_name
-            logging.debug("igc_file_name: " + str(igc_file_name))
-            track_date_dir = os.path.join(config.track_dir, date_str)
-
-                ### Create dir
-            try:
-                os.makedirs(track_date_dir)
-            except FileExistsError:
-                pass            
-
-            track_date_path = os.path.join(track_date_dir, igc_file_name)
 
             resp = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(config.token, file_info.file_path))
-            with open(track_date_path, "wb") as fout:
-                fout.write(resp.content)
-                bot.send_message(message.from_user.id, "Ваш трек сохранен и передан на обработку.")
+            
+            date_str = date_from_igc(resp.content)
+
+            if date_str != None:
+
+                igc_file_name = date_str + "#" + message.from_user.username + "#" + message.document.file_name
+                logging.debug("igc_file_name: " + str(igc_file_name))
+                track_date_dir = os.path.join(config.track_dir, date_str)
+
+                    ### Create dir
+                try:
+                    os.makedirs(track_date_dir)
+                except FileExistsError:
+                    pass            
+
+                track_date_path = os.path.join(track_date_dir, igc_file_name)
+
+                with open(track_date_path, "wb") as fout:
+                    fout.write(resp.content)
+                    bot.send_message(message.from_user.id, "Ваш трек сохранен и передан на обработку.")
+            else:
+                track_error(bot, message)
+                
         except Exception as e:
             logging.error("Exception:" + str(e))
-            bot.send_message(message.from_user.id, "Что то пошло не так, трек не сохранен. Отправьте пожалуйста свой трек лично скореру.")
+            track_error(bot, message)
             raise(e)
 
     bot.polling(non_stop=True, interval=0) #обязательная для работы бота часть
+
+def track_error(bot, message):
+    bot.send_message(message.from_user.id, "Что то пошло не так, трек не сохранен. Отправьте пожалуйста свой трек лично скореру.")
+    
 
 def read_config(file_name):
     global config
@@ -155,6 +166,20 @@ def get_param(cParser, section, object_var_name, conf_obj, param_name, param_typ
         if mantatory_flag:
             raise CONFIG_EXCEPTION("Error config: " + "[" + section +"]." + param_name +" MUST be defined")
 
+
+def date_from_igc(data):
+    data_str = data.decode('utf-8')
+    for line in data_str.splitlines():
+        m = re.match(r'^HFDTEDATE:.*(\d{2})(\d{2})(\d{2}),.*', line)
+        if m != None:
+            DD = m.group(1)
+            MM = m.group(2)
+            YYYY = '20' + m.group(3)
+            date_str = f'{YYYY}-{MM}-{DD}'
+            logging.info(f'date: {date_str}')
+            return date_str
+    logging.error('field HFDTEDATE wasn\'t found')
+    return None
 
 if __name__ == '__main__':
     main(sys.argv)
