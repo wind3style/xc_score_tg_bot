@@ -17,7 +17,10 @@ PRG_NAME="xc_score_tg_bot"
 # полный путь до скрипта
 CMD_NAME=`readlink -e "$0"`
 
-CMD_DIR=/home/alex/Projects/xc_score_tg_bot
+. /etc/xc_score/xc_score_tg_bot
+
+# каталог в котором лежит скрипт
+CMD_DIR=$PREFIX
 
 # каталоги функциональные
 LCK_DIR="$CMD_DIR/var/run"

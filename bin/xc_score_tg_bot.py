@@ -14,7 +14,7 @@ import re
 
 
 ### VERSION_BEGIN
-version='1.0.7'
+version='1.0.9'
 ### VERSION_END
 
 
