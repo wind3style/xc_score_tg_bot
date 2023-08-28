@@ -13,7 +13,7 @@ import re
 
 
 ### VERSION_BEGIN
-version='1.0.10'
+version='1.0.11'
 ### VERSION_END
 
 
@@ -24,6 +24,8 @@ class Config:
         self.error_dir = None
         self.timezone = None
         self.log_level = 'INFO'
+        self.test_mode = False
+        self.test_igc_dir = None
 
 config = Config()
 
@@ -63,6 +65,10 @@ def main(argv_all):
     logging.basicConfig(level=config.log_level, format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
     telebot.logger.setLevel(config.log_level)
 
+    if config.test_mode == True:
+        test_date_from_igc()
+        sys.exit(0)
+
     bot = telebot.TeleBot(config.token)
 
     @bot.message_handler(commands=['start'])
@@ -86,6 +92,11 @@ def main(argv_all):
             logging.debug("message.from_user.id: " + str(message.from_user.id))
             logging.debug("message.from_user.username: " + str(message.from_user.username))
             logging.debug("file_id: " + str(message.document.file_id))
+            
+            if message.from_user.username == None:
+                bot.send_message(message.from_user.id, "У вас отсутствует Telegram username, к сожалению ничего с этим поделать не могу.")
+                return
+            
             file_info = bot.get_file(message.document.file_id)
 
             resp = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(config.token, file_info.file_path))
@@ -120,9 +131,10 @@ def main(argv_all):
                         pass            
                     
                     igc_file_name = message.from_user.username + "#" + message.document.file_name
-                    error_path = os.path.join(config.error_dir, igc_file_name)
+                    error_track_path = os.path.join(config.error_dir, igc_file_name)
+                    logging.debug(f'save error track: {error_track_path}')
 
-                    with open(error_path, "wb") as fout:
+                    with open(error_track_path, "wb") as fout:
                         fout.write(resp.content)
                     
                 
@@ -150,6 +162,8 @@ def read_config(file_name):
         get_param(cParser, 'MAIN', 'timezone', config, 'timezone', str, True)
         get_param(cParser, 'MAIN', 'log_level', config, 'log_level', str, False)
         get_param(cParser, 'MAIN', 'log_file', config, 'log_file', str, False)
+        get_param(cParser, 'MAIN', 'test_mode', config, 'test_mode', bool, False)
+        get_param(cParser, 'MAIN', 'test_igc_dir', config, 'test_igc_dir', str, False)
 
         if config.log_level not in ['DEBUG', 'INFO', 'ERROR']:
             raise MAIN_EXCEPTION('Incorrect log_level value: "%s"'%(config.log_level))
@@ -186,6 +200,9 @@ def date_from_igc(data):
     data_str = data.decode('utf-8')
     for line in data_str.splitlines():
         m = re.match(r'^HFDTEDATE:.*(\d{2})(\d{2})(\d{2}).*', line)
+        if m == None:
+            m = re.match(r'^HFDTE(\d{2})(\d{2})(\d{2}).*', line)
+            
         if m != None:
             DD = m.group(1)
             MM = m.group(2)
@@ -195,6 +212,35 @@ def date_from_igc(data):
             return date_str
     logging.error('field HFDTEDATE wasn\'t found')
     return None
+
+def test_date_from_igc():
+    
+    if config.test_igc_dir != None:
+
+        logging.info(f'Read tracks from config.test_igc_dir: {config.test_igc_dir}')
+        try:
+            file_list = os.listdir(config.test_igc_dir)
+        except FileNotFoundError as e:
+            logging.error(f'cannot find TG path: {tg_bot_date_dir}')
+            return
+
+        print(file_list)
+
+        for file_name in file_list:
+            try:
+                path_igc = os.path.join(config.test_igc_dir, file_name)
+                with open(path_igc, "rb") as fin:
+                    igc_data = fin.read()
+                    date_str = date_from_igc(igc_data)
+                    if date_str != None:
+                        logging.info(f'date {date_str}')
+                        logging.info(f'IGC file - OK, path {path_igc}')
+                    else:
+                        logging.info(f'IGC file - Failed, path {path_igc}')
+
+            except FileNotFoundError:
+                logging.info(f'IGC file path {path_igc} wasn\'t find')
+        
 
 if __name__ == '__main__':
     main(sys.argv)
